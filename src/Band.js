@@ -1,39 +1,56 @@
 
 import React from "react";
-import { Query } from "react-apollo";
-import gql from "graphql-tag";
+import { Mutation, Query } from "react-apollo";
+import Member from './BandMember';
+import { FIRE_BAND_MEMBER, GET_BAND_MEMBERS } from "./queries";
+import { MemberCard } from "./styled";
+import Spinner from "./Spinner";
 
-const Fan = ({ age }) => {
-  return <span>{age}</span>
-}
-
-const Member = ({ name, realName, drink, age, fans, instrument }) => {
-  const allFans = fans.map((fan, index) => <Fan key={`${realName}--${index}`} {...fan} />) 
-  return <div>{name} ({realName}) {age} - {drink} {instrument} {allFans}</div>
-};
 
 const BandMembers = () => (
   <Query
-    query={gql`
-      {
-        bandMembers {
-          name
-          realName
-          age
-          drink
-          instrument
-          fans {
-            age
-          }
-        }
-      }
-    `}
+    query={GET_BAND_MEMBERS}
   >
     {({ loading, error, data }) => {
-      if (loading) return <p>Good things take time....</p>
-      if (error) return <p>Something went wrong...</p>
+      
+      if (loading) return <Spinner />
+      if (error) return <p>Something went wrong... Oh well, too bad!</p>
 
-      return <div className="row">{data.bandMembers.map(member => <Member key={`member--${member.realName}--${member.age}`} {...member} />)}</div>
+      return (
+        <>
+          {data.bandMembers.map(member => {
+            
+            const { id } = member;
+            return (
+            
+              <Mutation
+                mutation={FIRE_BAND_MEMBER}
+                key={id}
+              >
+                {(fireBandMember, { loading, error }) => (
+
+                  <MemberCard>
+                    <Member
+                      key={id}
+                      {...member}
+                      handleFireBandMember={
+                        () => fireBandMember({
+                          variables: { id },
+                          refetchQueries: [{ query: GET_BAND_MEMBERS }]
+                        })}
+                    />
+                    {loading && <Spinner />}
+                    {error && <p>Error :( Please try again</p>}
+                  </MemberCard>
+
+                )}
+
+              </Mutation>
+            );
+          })
+          }
+        </>
+      );
     }}
   </Query>
 );
